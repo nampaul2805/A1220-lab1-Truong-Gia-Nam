@@ -4,6 +4,31 @@ import argparse
 from receipt_parser import file_io as io_mod
 from receipt_parser import gpt
 
+def sanitize_amount(data):
+    """Normalize the 'amount' field by removing '$' and converting to float.
+
+    Args:
+        data: Dictionary containing receipt fields.
+
+    Returns:
+        The same dictionary, with 'amount' converted to float when possible.
+    """
+    amount = data.get("amount")
+
+    if amount is None:
+        return data
+
+    if isinstance(amount, str):
+        amount = amount.strip().replace("$", "").strip()
+
+    try:
+        data["amount"] = float(amount)
+    except (ValueError, TypeError):
+        # If conversion fails, keep original value (or set to None)
+        pass
+
+    return data
+
 def process_directory(dirpath):
     """Process all receipt images in a directory.
 
@@ -17,8 +42,10 @@ def process_directory(dirpath):
     for name, path in io_mod.list_files(dirpath):
         image_b64 = io_mod.encode_file(path)
         data = gpt.extract_receipt_info(image_b64)
+        data = sanitize_amount(data)
         results[name] = data
     return results
+
 
 def main():
     """Parse command-line arguments and run the receipt processing."""
